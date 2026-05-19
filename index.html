@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANTONIO — Baby Care Arcade</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:ital,wght@1,700&display=swap');
+
+  :root {
+    --terracotta: #C1714A;
+    --periwinkle: #7B8CC5;
+    --cream: #F5EDD8;
+    --deep-blue: #2D3A6B;
+    --sage: #7A9E7E;
+    --gold: #D4A853;
+    --rust: #A8522A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--deep-blue);
+    font-family: 'Lora', serif;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    overflow-x: hidden; position: relative;
+  }
+
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(123,140,197,0.15) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(193,113,74,0.12) 0%, transparent 40%),
+      repeating-linear-gradient(45deg, transparent 0, transparent 30px, rgba(255,255,255,0.015) 30px, rgba(255,255,255,0.015) 31px);
+    pointer-events: none;
+  }
+
+  /* ── SPLASH ── */
+  #splashScreen {
+    position: fixed; inset: 0; background: var(--deep-blue); z-index: 200;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px 24px; gap: 0;
+  }
+  #splashScreen.hiding { animation: splashFadeOut 0.7s ease-in forwards; }
+  @keyframes splashFadeOut { to { opacity: 0; transform: scale(1.04); pointer-events: none; } }
+
+  .splash-crabs { animation: splashDrop 0.6s cubic-bezier(0.34,1.56,0.64,1) both; margin-bottom: 20px; display: flex; justify-content: center; }
+  @keyframes splashDrop { from { opacity: 0; transform: translateY(-30px); } }
+
+  .splash-congrats {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(2rem, 8vw, 2.9rem); color: var(--gold);
+    letter-spacing: 0.04em; text-shadow: 0 3px 0 var(--rust), 0 6px 20px rgba(0,0,0,0.4);
+    line-height: 1.15; animation: splashFadeUp 0.6s 0.2s ease-out both; margin-bottom: 6px;
+  }
+  .splash-names {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(2.2rem, 9vw, 3.4rem); color: var(--cream);
+    letter-spacing: 0.03em; text-shadow: 0 3px 0 rgba(0,0,0,0.3);
+    animation: splashFadeUp 0.6s 0.35s ease-out both; margin-bottom: 22px;
+  }
+  .splash-divider { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; animation: splashFadeUp 0.6s 0.45s ease-out both; }
+  .splash-divider-line { width: 60px; height: 1.5px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .splash-divider-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--terracotta); }
+
+  .splash-adventure {
+    font-family: 'Lora', serif; font-style: italic;
+    font-size: 1.05rem; color: var(--cream); opacity: 0.75;
+    letter-spacing: 0.04em; margin-bottom: 28px;
+    animation: splashFadeUp 0.6s 0.5s ease-out both;
+  }
+
+  .splash-baby-preview {
+    animation: splashFadeUp 0.7s 0.3s ease-out both, floatAnimSplash 3s 1s ease-in-out infinite;
+    margin-bottom: 28px; filter: drop-shadow(0 8px 20px rgba(193,113,74,0.3));
+  }
+  @keyframes floatAnimSplash { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes splashFadeUp { from { opacity: 0; transform: translateY(20px); } }
+
+  .splash-play-btn {
+    background: var(--gold); color: var(--rust); border: none; border-radius: 50px;
+    padding: 16px 48px; font-family: 'Fredoka One', cursive; font-size: 1.25rem;
+    letter-spacing: 0.1em; cursor: pointer;
+    box-shadow: 0 5px 0 var(--rust), 0 8px 24px rgba(0,0,0,0.3); transition: all 0.15s;
+    animation: splashFadeUp 0.6s 0.65s ease-out both, pulseGlow 2s 1.5s ease-in-out infinite;
+  }
+  .splash-play-btn:hover { background: #ddb860; transform: translateY(-2px); box-shadow: 0 7px 0 var(--rust), 0 12px 28px rgba(0,0,0,0.35); }
+  .splash-play-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--rust); }
+  @keyframes pulseGlow {
+    0%,100%{box-shadow:0 5px 0 var(--rust),0 8px 24px rgba(0,0,0,0.3)}
+    50%{box-shadow:0 5px 0 var(--rust),0 8px 32px rgba(212,168,83,0.45)}
+  }
+
+  /* ── LEVEL TRANSITION ── */
+  #levelOverlay {
+    display: none; position: fixed; inset: 0; background: rgba(45,58,107,0.97); z-index: 150;
+    align-items: center; justify-content: center; flex-direction: column;
+    text-align: center; padding: 24px;
+  }
+  #levelOverlay.active { display: flex; }
+  .level-badge {
+    font-family: 'Fredoka One', cursive; font-size: 0.8rem; color: var(--rust);
+    background: var(--gold); padding: 4px 14px; border-radius: 20px;
+    letter-spacing: 0.1em; margin-bottom: 16px; animation: splashFadeUp 0.5s ease-out both;
+  }
+  .level-title {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(1.8rem, 7vw, 2.5rem); color: var(--gold);
+    text-shadow: 0 3px 0 var(--rust); margin-bottom: 10px;
+    animation: splashFadeUp 0.5s 0.1s ease-out both;
+  }
+  .level-baby-wrap {
+    animation: splashFadeUp 0.6s 0.15s ease-out both, floatAnimSplash 3s 0.8s ease-in-out infinite;
+    margin-bottom: 14px; filter: drop-shadow(0 6px 14px rgba(193,113,74,0.3));
+  }
+  .level-desc {
+    font-family: 'Lora', serif; font-style: italic; color: var(--cream); opacity: 0.85;
+    font-size: 1rem; max-width: 300px; line-height: 1.7; margin-bottom: 10px;
+    animation: splashFadeUp 0.5s 0.2s ease-out both;
+  }
+  .level-unlock {
+    font-family: 'Fredoka One', cursive; font-size: 0.9rem; color: var(--sage);
+    margin-bottom: 6px; animation: splashFadeUp 0.5s 0.3s ease-out both;
+  }
+  .level-challenge {
+    font-family: 'Fredoka One', cursive; font-size: 0.82rem; color: #E07060;
+    margin-bottom: 28px; animation: splashFadeUp 0.5s 0.35s ease-out both;
+  }
+  .level-btn {
+    background: var(--gold); color: var(--rust); border: none; border-radius: 30px;
+    padding: 12px 36px; font-family: 'Fredoka One', cursive; font-size: 1.1rem;
+    cursor: pointer; box-shadow: 0 4px 0 var(--rust); transition: all 0.15s;
+    letter-spacing: 0.05em; animation: splashFadeUp 0.5s 0.4s ease-out both;
+  }
+  .level-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--rust); }
+
+  /* ── EVENT BANNER ── */
+  #eventBanner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: linear-gradient(135deg, #E07060, #C1714A);
+    color: var(--cream); font-family: 'Fredoka One', cursive;
+    font-size: 0.95rem; text-align: center; padding: 10px 16px;
+    z-index: 90; transform: translateY(-100%);
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); letter-spacing: 0.04em;
+  }
+  #eventBanner.show { transform: translateY(0); }
+
+  /* ── PERSONALITY BADGE ── */
+  #personalityReveal {
+    background: rgba(212,168,83,0.12); border: 1.5px solid rgba(212,168,83,0.4);
+    border-radius: 10px; padding: 8px 14px;
+    font-family: 'Fredoka One', cursive; font-size: 0.78rem;
+    color: var(--gold); letter-spacing: 0.04em; text-align: center;
+    display: none; animation: splashFadeUp 0.5s ease-out both;
+    margin-bottom: 0;
+  }
+  #personalityReveal.visible { display: block; }
+  .p-loves { color: #a0c8a4; }
+  .p-dislikes { color: #E07060; }
+
+  /* ── LEVEL PIPS ── */
+  #levelIndicator { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 0 2px; }
+  .level-pip { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.2); transition: all 0.4s; }
+  .level-pip.done   { background: var(--gold); border-color: var(--rust); }
+  .level-pip.active { background: var(--terracotta); border-color: var(--rust); box-shadow: 0 0 8px rgba(193,113,74,0.6); }
+
+  /* ── MAIN GAME ── */
+  #gameWrapper { width: 100%; display: flex; flex-direction: column; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.6s 0.2s ease; }
+  #gameWrapper.visible { opacity: 1; pointer-events: all; }
+
+  .game-header { width: 100%; max-width: 540px; padding: 10px 20px 0; text-align: center; }
+  .crabs-banner { margin-bottom: 8px; }
+  .congrats-line {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: 1.9rem; color: var(--gold); letter-spacing: 0.05em; margin-bottom: 4px;
+    text-shadow: 0 2px 0 var(--rust), 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .game-container { width: 100%; max-width: 540px; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+  .stats-panel {
+    background: rgba(255,255,255,0.06); border: 1.5px solid rgba(245,237,216,0.15);
+    border-radius: 12px; padding: 14px 16px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px;
+  }
+  .stat-row { display: flex; flex-direction: column; gap: 4px; }
+  .stat-label { display: flex; align-items: center; gap: 6px; font-family: 'Fredoka One', cursive; font-size: 0.82rem; color: var(--cream); letter-spacing: 0.05em; }
+  .stat-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; }
+  .stat-bar-track { height: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+  .stat-bar-fill { height: 100%; border-radius: 10px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); position: relative; }
+  .stat-bar-fill::after { content: ''; position: absolute; top: 2px; left: 4px; right: 4px; height: 3px; background: rgba(255,255,255,0.3); border-radius: 3px; }
+  .stat-hunger .stat-bar-fill { background: linear-gradient(90deg, #E07060, #D4A853); }
+  .stat-sleep  .stat-bar-fill { background: linear-gradient(90deg, #7B8CC5, #a0b4e8); }
+  .stat-love   .stat-bar-fill { background: linear-gradient(90deg, #C1714A, #E8926A); }
+  .stat-happy  .stat-bar-fill { background: linear-gradient(90deg, #7A9E7E, #a0c8a4); }
+
+  .baby-stage {
+    background: var(--cream); border-radius: 16px; padding: 20px 16px; text-align: center;
+    position: relative; border: 3px solid var(--terracotta);
+    box-shadow: 0 0 0 6px rgba(193,113,74,0.15), 0 8px 32px rgba(0,0,0,0.3);
+    min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .baby-stage::before {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 5px;
+    background: repeating-linear-gradient(90deg, var(--terracotta) 0, var(--terracotta) 10px, var(--gold) 10px, var(--gold) 20px, var(--periwinkle) 20px, var(--periwinkle) 30px, var(--sage) 30px, var(--sage) 40px);
+  }
+  .baby-canvas { position: relative; width: 140px; height: 140px; }
+  .baby-svg-main { width: 140px; height: 140px; transition: transform 0.3s; filter: drop-shadow(0 6px 12px rgba(193,113,74,0.25)); }
+  .baby-svg-main.bounce { animation: babyBounce 0.5s ease-out; }
+  @keyframes babyBounce { 0%{transform:scale(1)} 30%{transform:scale(1.15) rotate(-5deg)} 60%{transform:scale(0.95) rotate(3deg)} 100%{transform:scale(1) rotate(0)} }
+  .baby-svg-main.wobble { animation: babyWobble 0.6s ease-out; }
+  @keyframes babyWobble { 0%{transform:rotate(0)} 20%{transform:rotate(-8deg)} 40%{transform:rotate(8deg)} 60%{transform:rotate(-4deg)} 80%{transform:rotate(4deg)} 100%{transform:rotate(0)} }
+  .baby-svg-main.wiggle { animation: babyWiggle 0.5s ease-out; }
+  @keyframes babyWiggle { 0%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} 100%{transform:translateX(0)} }
+  .baby-float { animation: floatAnim 3s ease-in-out infinite; }
+  @keyframes floatAnim { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+  .thought-bubble {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(255,255,255,0.92); border-radius: 12px;
+    padding: 4px 9px; font-family: 'Fredoka One', cursive;
+    font-size: 0.68rem; color: var(--rust); opacity: 0;
+    transition: opacity 0.4s; pointer-events: none; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .thought-bubble.show { opacity: 1; }
+
+  .mood-text { font-family: 'Fredoka One', cursive; font-size: 1rem; color: var(--rust); margin-top: 10px; min-height: 1.4em; }
+  .effect-msg { position: absolute; font-family: 'Fredoka One', cursive; font-size: 1.1rem; pointer-events: none; animation: floatUp 1.2s ease-out forwards; z-index: 20; }
+  @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 70%{opacity:1;transform:translateY(-50px) scale(1.1)} 100%{opacity:0;transform:translateY(-80px) scale(0.8)} }
+
+  /* ── ACTIONS ── */
+  .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .action-btn {
+    background: var(--deep-blue); border: 2.5px solid; border-radius: 14px; padding: 10px 10px;
+    cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transition: all 0.15s; position: relative; overflow: hidden; user-select: none; -webkit-user-select: none;
+  }
+  .action-btn:active { transform: scale(0.93); }
+  .action-btn.feed     { border-color: #E07060; }
+  .action-btn.cuddle   { border-color: var(--terracotta); }
+  .action-btn.burp     { border-color: var(--gold); }
+  .action-btn.diaper   { border-color: var(--sage); }
+  .action-btn.tummy    { border-color: var(--periwinkle); }
+  .action-btn.peekaboo { border-color: #E8926A; }
+  .action-btn.story    { border-color: var(--gold); }
+  .action-btn.solids   { border-color: var(--sage); }
+  .action-btn::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0); transition: background 0.15s; }
+  .action-btn:active::before { background: rgba(255,255,255,0.08); }
+  .action-btn.locked { opacity: 0.35; cursor: not-allowed; }
+  .action-btn.loved    { box-shadow: 0 0 12px rgba(160,200,164,0.55); }
+  .action-btn.disliked { box-shadow: 0 0 12px rgba(224,112,96,0.45); }
+  .btn-label { font-family: 'Fredoka One', cursive; font-size: 0.82rem; letter-spacing: 0.06em; white-space: nowrap; }
+  .action-btn.feed     .btn-label { color: #E8C99A; }
+  .action-btn.cuddle   .btn-label { color: #E8A07A; }
+  .action-btn.burp     .btn-label { color: var(--gold); }
+  .action-btn.diaper   .btn-label { color: #a0c8a4; }
+  .action-btn.tummy    .btn-label { color: #a0b4e8; }
+  .action-btn.peekaboo .btn-label { color: #E8926A; }
+  .action-btn.story    .btn-label { color: var(--gold); }
+  .action-btn.solids   .btn-label { color: #a0c8a4; }
+  .btn-hint { font-size: 0.58rem; color: rgba(255,255,255,0.3); font-family: 'Lora', serif; font-style: italic; }
+  .btn-cooldown { position: absolute; bottom: 0; left: 0; height: 3px; background: rgba(255,255,255,0.4); border-radius: 0 0 14px 14px; width: 0; transition: none; }
+
+  /* ── HAPPINESS PANEL ── */
+  .happiness-display {
+    background: var(--terracotta); border-radius: 12px; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 0 var(--rust);
+  }
+  .happiness-label { font-family: 'Fredoka One', cursive; color: var(--cream); font-size: 0.85rem; letter-spacing: 0.04em; }
+  .happiness-score { font-family: 'Fredoka One', cursive; font-size: 1.8rem; color: var(--gold); text-shadow: 0 2px 0 var(--rust); }
+  .happiness-score.pop { animation: scorePop 0.3s ease-out; }
+  @keyframes scorePop { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
+  .happiness-stars { display: flex; gap: 3px; font-size: 1rem; }
+  .level-progress-wrap { margin-top: 5px; }
+  .level-progress-label { font-family: 'Fredoka One', cursive; font-size: 0.65rem; color: rgba(245,237,216,0.65); letter-spacing: 0.04em; margin-bottom: 3px; }
+  .level-progress-track { height: 5px; background: rgba(0,0,0,0.25); border-radius: 5px; overflow: hidden; }
+  .level-progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #E8C99A); border-radius: 5px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+
+  /* col wrappers — stack on mobile, side by side on desktop */
+  .col-left  { display: flex; flex-direction: column; gap: 8px; }
+  .col-right { display: flex; flex-direction: column; gap: 8px; }
+  .win-overlay { display: none; position: fixed; inset: 0; background: rgba(45,58,107,0.95); z-index: 100; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 20px; }
+  .win-overlay.active { display: flex; }
+  .win-turtle-wrap { animation: turtleSpin 4s ease-in-out infinite; }
+  @keyframes turtleSpin { 0%,100%{transform:rotate(-5deg) scale(1)} 50%{transform:rotate(5deg) scale(1.08)} }
+  .win-title { font-family: 'Fredoka One', cursive; font-size: 1.6rem; color: var(--gold); text-shadow: 0 3px 0 var(--rust); margin: 16px 0 8px; }
+  .win-btn { margin-top: 24px; background: var(--gold); color: var(--rust); border: none; border-radius: 30px; padding: 12px 32px; font-family: 'Fredoka One', cursive; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 0 var(--rust); transition: all 0.15s; letter-spacing: 0.05em; }
+  .win-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--rust); }
+
+  @keyframes statPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .stat-bar-fill.low { animation: statPulse 1s ease-in-out infinite; }
+  .star-particle { position: absolute; pointer-events: none; font-size: 1.2rem; animation: starFloat 1s ease-out forwards; z-index: 20; }
+  @keyframes starFloat { 0%{opacity:1;transform:translate(0,0) scale(1) rotate(0deg)} 100%{opacity:0;transform:translate(var(--tx,20px),var(--ty,-40px)) scale(0.5) rotate(180deg)} }
+
+  /* ── IPAD PORTRAIT (600–859px) ── */
+  @media (min-width: 600px) and (max-width: 859px) {
+    .game-header { max-width: 620px; }
+    .congrats-line { font-size: 2.2rem; }
+
+    .game-container { max-width: 620px; padding: 10px 24px 24px; gap: 12px; }
+
+    .baby-canvas, .baby-svg-main { width: 165px; height: 165px; }
+    .baby-stage { min-height: 240px; padding: 24px 20px; }
+
+    .stats-panel { padding: 16px 20px; gap: 12px 20px; }
+    .stat-label  { font-size: 0.88rem; }
+    .stat-bar-track { height: 11px; }
+
+    .action-btn  { padding: 12px; }
+    .btn-label   { font-size: 0.88rem; }
+
+    .happiness-score { font-size: 2rem; }
+    .happiness-label { font-size: 0.9rem; }
+    .mood-text { font-size: 1.05rem; }
+  }
+
+  /* ── IPAD LANDSCAPE (1024px) falls into desktop ── */
+
+  /* ── DESKTOP ── */
+  @media (min-width: 860px) {
+    .game-header { max-width: 900px; }
+    .congrats-line { font-size: 2.4rem; }
+
+    .game-container {
+      max-width: 900px;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 10px 24px 24px;
+    }
+
+    .col-left  { display: flex; flex-direction: column; gap: 14px; flex: 1.1; }
+    .col-right { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+
+    #personalityReveal { width: 100%; }
+
+    .baby-canvas, .baby-svg-main { width: 180px; height: 180px; }
+    .baby-stage { min-height: 280px; }
+    .stat-bar-track  { height: 12px; }
+    .stat-label      { font-size: 0.9rem; }
+    .happiness-score { font-size: 2.2rem; }
+    .happiness-label { font-size: 0.95rem; }
+    .action-btn      { padding: 14px 12px; }
+    .btn-label       { font-size: 0.9rem; }
+    .mood-text       { font-size: 1.1rem; }
+
+    #levelOverlay .level-title { font-size: 3rem; }
+    #levelOverlay .level-desc  { font-size: 1.1rem; max-width: 420px; }
+    .win-title { font-size: 2rem; }
+    .win-overlay svg { width: 200px; height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="eventBanner"></div>
+
+<!-- ══ SPLASH ══ -->
+<div id="splashScreen">
+  <div class="splash-crabs">
+    <svg width="340" height="36" viewBox="0 0 340 36" fill="none" style="max-width:100%">
+      <path d="M0 18 Q85 10 170 18 Q255 26 340 18" stroke="#A8522A" stroke-width="1.5" fill="none" opacity="0.5"/>
+      <g transform="translate(20,5)"><ellipse cx="12" cy="14" rx="11" ry="8" fill="#C1714A"/><circle cx="8" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="8" cy="10" r="1.2" fill="#2D3A6B"/><circle cx="16" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="16" cy="10" r="1.2" fill="#2D3A6B"/><path d="M5 7 Q2 2 0 4" stroke="#A8522A" stroke-width="2" fill="none"/><path d="M19 7 Q22 2 24 4" stroke="#A8522A" stroke-width="2" fill="none"/><path d="M3 12 Q0 10 -1 14" stroke="#A8522A" stroke-width="1.5" fill="none"/><path d="M21 12 Q24 10 25 14" stroke="#A8522A" stroke-width="1.5" fill="none"/><path d="M3 17 Q0 19 1 22" stroke="#A8522A" stroke-width="1.5" fill="none"/><path d="M21 17 Q24 19 23 22" stroke="#A8522A" stroke-width="1.5" fill="none"/><path d="M8 22 Q12 27 16 22" stroke="#A8522A" stroke-width="1.5" fill="none"/><circle cx="12" cy="11" r="3" fill="#A8522A" opacity="0.4"/></g>
+      <text x="52" y="22" fill="#D4A853" font-size="12" font-family="serif">&#10022;</text>
+      <path d="M66 18 Q78 12 90 18 Q102 24 114 18" stroke="#7B8CC5" stroke-width="2" fill="none" opacity="0.7"/>
+      <g transform="translate(118,5)"><ellipse cx="12" cy="14" rx="11" ry="8" fill="#7B8CC5"/><circle cx="8" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="8" cy="10" r="1.2" fill="#2D3A6B"/><circle cx="16" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="16" cy="10" r="1.2" fill="#2D3A6B"/><path d="M5 7 Q2 2 0 4" stroke="#5a6ca0" stroke-width="2" fill="none"/><path d="M19 7 Q22 2 24 4" stroke="#5a6ca0" stroke-width="2" fill="none"/><path d="M3 12 Q0 10 -1 14" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><path d="M21 12 Q24 10 25 14" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><path d="M3 17 Q0 19 1 22" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><path d="M21 17 Q24 19 23 22" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><path d="M8 22 Q12 27 16 22" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><circle cx="12" cy="11" r="3" fill="#2D3A6B" opacity="0.3"/></g>
+      <text x="148" y="22" fill="#7A9E7E" font-size="12" font-family="serif">&#10022;</text>
+      <path d="M162 18 Q174 24 186 18 Q198 12 210 18" stroke="#C1714A" stroke-width="2" fill="none" opacity="0.7"/>
+      <text x="218" y="22" fill="#D4A853" font-size="12" font-family="serif">&#10022;</text>
+      <g transform="translate(238,5)"><ellipse cx="12" cy="14" rx="11" ry="8" fill="#7A9E7E"/><circle cx="8" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="8" cy="10" r="1.2" fill="#2D3A6B"/><circle cx="16" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="16" cy="10" r="1.2" fill="#2D3A6B"/><path d="M5 7 Q2 2 0 4" stroke="#4a7a4e" stroke-width="2" fill="none"/><path d="M19 7 Q22 2 24 4" stroke="#4a7a4e" stroke-width="2" fill="none"/><path d="M3 12 Q0 10 -1 14" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><path d="M21 12 Q24 10 25 14" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><path d="M3 17 Q0 19 1 22" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><path d="M21 17 Q24 19 23 22" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><path d="M8 22 Q12 27 16 22" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><circle cx="12" cy="11" r="3" fill="#4a7a4e" opacity="0.3"/></g>
+      <text x="268" y="22" fill="#C1714A" font-size="12" font-family="serif">&#10022;</text>
+      <g transform="translate(290,5)"><ellipse cx="14" cy="16" rx="12" ry="9" fill="#7A9E7E"/><ellipse cx="14" cy="16" rx="8" ry="6" fill="#5a7e5e"/><circle cx="14" cy="6" r="5" fill="#7A9E7E"/><circle cx="14" cy="6" r="3" fill="#5a7e5e"/><ellipse cx="4" cy="18" rx="4" ry="3" fill="#7A9E7E"/><ellipse cx="24" cy="18" rx="4" ry="3" fill="#7A9E7E"/><ellipse cx="7" cy="11" rx="3.5" ry="2.5" fill="#7A9E7E"/><ellipse cx="21" cy="11" rx="3.5" ry="2.5" fill="#7A9E7E"/><path d="M14 25 Q14 30 14 30" stroke="#7A9E7E" stroke-width="2.5" fill="none"/><circle cx="13" cy="5" r="1" fill="#3a2a1a"/><circle cx="15" cy="5" r="1" fill="#3a2a1a"/><circle cx="11" cy="16" r="1.5" fill="#F5EDD8" opacity="0.5"/><circle cx="16" cy="14" r="1.2" fill="#F5EDD8" opacity="0.5"/><circle cx="14" cy="19" r="1.2" fill="#F5EDD8" opacity="0.5"/></g>
+    </svg>
+  </div>
+  <div class="splash-baby-preview">
+    <svg width="110" height="110" viewBox="0 0 140 140" fill="none">
+      <ellipse cx="70" cy="96" rx="35" ry="38" fill="#7B8CC5"/><ellipse cx="70" cy="96" rx="27" ry="30" fill="#C1714A" opacity="0.25"/>
+      <circle cx="70" cy="56" r="26" fill="#E8C99A"/><ellipse cx="70" cy="39" rx="21" ry="13" fill="#C1714A"/><ellipse cx="70" cy="32" rx="14" ry="8" fill="#A8522A"/><circle cx="70" cy="26" r="5" fill="#D4A853"/>
+      <path d="M59 60 Q63 56 67 60" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M73 60 Q77 56 81 60" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M62 70 Q70 77 78 70" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <ellipse cx="56" cy="66" rx="6" ry="4" fill="#E07060" opacity="0.3"/>
+      <ellipse cx="84" cy="66" rx="6" ry="4" fill="#E07060" opacity="0.3"/>
+    </svg>
+  </div>
+  <div class="splash-congrats">Congratulations</div>
+  <div class="splash-names">Tiago &amp; Ana!</div>
+  <div class="splash-divider">
+    <div class="splash-divider-line"></div>
+    <div class="splash-divider-dot"></div>
+    <div class="splash-divider-line"></div>
+  </div>
+  <div class="splash-adventure">A new adventure awaits you.</div>
+  <button class="splash-play-btn" onclick="startGame()">PLAY NOW</button>
+</div>
+
+<!-- ══ LEVEL TRANSITION ══ -->
+<div id="levelOverlay">
+  <div class="level-badge" id="lvlBadge">LEVEL 2</div>
+  <div class="level-title" id="lvlTitle">Antonio is 1 Month Old!</div>
+  <div class="level-baby-wrap">
+    <svg width="100" height="100" viewBox="0 0 140 140" fill="none">
+      <ellipse cx="70" cy="96" rx="35" ry="38" fill="#7B8CC5"/><ellipse cx="70" cy="96" rx="27" ry="30" fill="#C1714A" opacity="0.25"/>
+      <circle cx="70" cy="56" r="26" fill="#E8C99A"/><ellipse cx="70" cy="39" rx="21" ry="13" fill="#C1714A"/><ellipse cx="70" cy="32" rx="14" ry="8" fill="#A8522A"/><circle cx="70" cy="26" r="5" fill="#D4A853"/>
+      <path d="M59 60 Q63 56 67 60" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M73 60 Q77 56 81 60" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M62 70 Q70 77 78 70" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <ellipse cx="56" cy="66" rx="6" ry="4" fill="#E07060" opacity="0.35"/>
+      <ellipse cx="84" cy="66" rx="6" ry="4" fill="#E07060" opacity="0.35"/>
+    </svg>
+  </div>
+  <div class="level-desc" id="lvlDesc">He is more alert and curious every day.</div>
+  <div class="level-unlock" id="lvlUnlock">+ Tummy Time unlocked!</div>
+  <div class="level-challenge" id="lvlChallenge">Stats drop faster now — stay on your toes!</div>
+  <button class="level-btn" onclick="resumeLevel()">Keep Going!</button>
+</div>
+
+<!-- ══ MAIN GAME ══ -->
+<div id="gameWrapper">
+  <div class="game-header">
+    <div class="crabs-banner">
+      <svg width="340" height="36" viewBox="0 0 340 36" fill="none" style="max-width:100%">
+        <path d="M0 18 Q85 10 170 18 Q255 26 340 18" stroke="#A8522A" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <g transform="translate(20,5)"><ellipse cx="12" cy="14" rx="11" ry="8" fill="#C1714A"/><circle cx="8" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="8" cy="10" r="1.2" fill="#2D3A6B"/><circle cx="16" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="16" cy="10" r="1.2" fill="#2D3A6B"/><path d="M5 7 Q2 2 0 4" stroke="#A8522A" stroke-width="2" fill="none"/><path d="M19 7 Q22 2 24 4" stroke="#A8522A" stroke-width="2" fill="none"/><path d="M3 12 Q0 10 -1 14" stroke="#A8522A" stroke-width="1.5" fill="none"/><path d="M21 12 Q24 10 25 14" stroke="#A8522A" stroke-width="1.5" fill="none"/><path d="M3 17 Q0 19 1 22" stroke="#A8522A" stroke-width="1.5" fill="none"/><path d="M21 17 Q24 19 23 22" stroke="#A8522A" stroke-width="1.5" fill="none"/><path d="M8 22 Q12 27 16 22" stroke="#A8522A" stroke-width="1.5" fill="none"/><circle cx="12" cy="11" r="3" fill="#A8522A" opacity="0.4"/></g>
+        <text x="52" y="22" fill="#D4A853" font-size="12" font-family="serif">&#10022;</text>
+        <path d="M66 18 Q78 12 90 18 Q102 24 114 18" stroke="#7B8CC5" stroke-width="2" fill="none" opacity="0.7"/>
+        <g transform="translate(118,5)"><ellipse cx="12" cy="14" rx="11" ry="8" fill="#7B8CC5"/><circle cx="8" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="8" cy="10" r="1.2" fill="#2D3A6B"/><circle cx="16" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="16" cy="10" r="1.2" fill="#2D3A6B"/><path d="M5 7 Q2 2 0 4" stroke="#5a6ca0" stroke-width="2" fill="none"/><path d="M19 7 Q22 2 24 4" stroke="#5a6ca0" stroke-width="2" fill="none"/><path d="M3 12 Q0 10 -1 14" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><path d="M21 12 Q24 10 25 14" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><path d="M3 17 Q0 19 1 22" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><path d="M21 17 Q24 19 23 22" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><path d="M8 22 Q12 27 16 22" stroke="#5a6ca0" stroke-width="1.5" fill="none"/><circle cx="12" cy="11" r="3" fill="#2D3A6B" opacity="0.3"/></g>
+        <text x="148" y="22" fill="#7A9E7E" font-size="12" font-family="serif">&#10022;</text>
+        <path d="M162 18 Q174 24 186 18 Q198 12 210 18" stroke="#C1714A" stroke-width="2" fill="none" opacity="0.7"/>
+        <text x="218" y="22" fill="#D4A853" font-size="12" font-family="serif">&#10022;</text>
+        <g transform="translate(238,5)"><ellipse cx="12" cy="14" rx="11" ry="8" fill="#7A9E7E"/><circle cx="8" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="8" cy="10" r="1.2" fill="#2D3A6B"/><circle cx="16" cy="10" r="2.5" fill="#F5EDD8"/><circle cx="16" cy="10" r="1.2" fill="#2D3A6B"/><path d="M5 7 Q2 2 0 4" stroke="#4a7a4e" stroke-width="2" fill="none"/><path d="M19 7 Q22 2 24 4" stroke="#4a7a4e" stroke-width="2" fill="none"/><path d="M3 12 Q0 10 -1 14" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><path d="M21 12 Q24 10 25 14" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><path d="M3 17 Q0 19 1 22" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><path d="M21 17 Q24 19 23 22" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><path d="M8 22 Q12 27 16 22" stroke="#4a7a4e" stroke-width="1.5" fill="none"/><circle cx="12" cy="11" r="3" fill="#4a7a4e" opacity="0.3"/></g>
+        <text x="268" y="22" fill="#C1714A" font-size="12" font-family="serif">&#10022;</text>
+        <g transform="translate(290,5)"><ellipse cx="14" cy="16" rx="12" ry="9" fill="#7A9E7E"/><ellipse cx="14" cy="16" rx="8" ry="6" fill="#5a7e5e"/><circle cx="14" cy="6" r="5" fill="#7A9E7E"/><circle cx="14" cy="6" r="3" fill="#5a7e5e"/><ellipse cx="4" cy="18" rx="4" ry="3" fill="#7A9E7E"/><ellipse cx="24" cy="18" rx="4" ry="3" fill="#7A9E7E"/><ellipse cx="7" cy="11" rx="3.5" ry="2.5" fill="#7A9E7E"/><ellipse cx="21" cy="11" rx="3.5" ry="2.5" fill="#7A9E7E"/><path d="M14 25 Q14 30 14 30" stroke="#7A9E7E" stroke-width="2.5" fill="none"/><circle cx="13" cy="5" r="1" fill="#3a2a1a"/><circle cx="15" cy="5" r="1" fill="#3a2a1a"/><circle cx="11" cy="16" r="1.5" fill="#F5EDD8" opacity="0.5"/><circle cx="16" cy="14" r="1.2" fill="#F5EDD8" opacity="0.5"/><circle cx="14" cy="19" r="1.2" fill="#F5EDD8" opacity="0.5"/></g>
+      </svg>
+    </div>
+    <div class="congrats-line">Congratulations Tiago &amp; Ana!</div>
+    <div id="levelIndicator">
+      <div class="level-pip active" id="pip0"></div>
+      <div class="level-pip" id="pip1"></div>
+      <div class="level-pip" id="pip2"></div>
+      <div class="level-pip" id="pip3"></div>
+    </div>
+  </div>
+
+  <div class="game-container">
+    <div class="col-left">
+      <div class="stats-panel">
+        <div class="stat-row stat-hunger">
+          <div class="stat-label"><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="5" width="6" height="7" rx="2.5" fill="#E8C99A"/><rect x="5" y="3" width="4" height="3" rx="1" fill="#E8C99A"/><ellipse cx="7" cy="2.5" rx="2" ry="1.5" fill="#C1714A"/><rect x="5" y="5" width="4" height="1" rx="0.5" fill="#C1714A" opacity="0.5"/></svg></span> Hunger</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="bar-hunger" style="width:70%"></div></div>
+        </div>
+        <div class="stat-row stat-sleep">
+          <div class="stat-label"><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2 Q5 3 5 7 Q5 11 9 12 Q5 13 3 10 Q1 7 3 4 Q5 1 9 2Z" fill="#a0b4e8"/><text x="8.5" y="7" font-size="4" fill="#7B8CC5" font-family="serif" font-weight="bold">z</text></svg></span> Sleep</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="bar-sleep" style="width:80%"></div></div>
+        </div>
+        <div class="stat-row stat-love">
+          <div class="stat-label"><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11 Q2 8 2 5 Q2 2 4.5 2 Q6 2 7 4 Q8 2 9.5 2 Q12 2 12 5 Q12 8 7 11Z" fill="#E8926A"/></svg></span> Love</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="bar-love" style="width:60%"></div></div>
+        </div>
+        <div class="stat-row stat-happy">
+          <div class="stat-label"><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" fill="#D4A853"/><circle cx="5" cy="6" r="0.8" fill="#3a2a1a"/><circle cx="9" cy="6" r="0.8" fill="#3a2a1a"/><path d="M4.5 8.5 Q7 11 9.5 8.5" stroke="#3a2a1a" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg></span> Happy</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="bar-happy" style="width:65%"></div></div>
+        </div>
+      </div>
+
+      <div class="baby-stage" id="babyStage">
+        <div class="thought-bubble" id="thoughtBubble"></div>
+        <div class="baby-canvas" id="babyCanvas">
+          <svg id="babySvg" class="baby-svg-main baby-float" viewBox="0 0 140 140" fill="none">
+            <ellipse cx="70" cy="96" rx="35" ry="38" fill="#7B8CC5"/>
+            <ellipse cx="70" cy="96" rx="27" ry="30" fill="#C1714A" opacity="0.25"/>
+            <path d="M40 82 Q70 75 100 82" stroke="#F5EDD8" stroke-width="1.8" fill="none" opacity="0.6"/>
+            <path d="M38 92 Q70 84 102 92" stroke="#F5EDD8" stroke-width="1.5" fill="none" opacity="0.4"/>
+            <circle cx="70" cy="104" r="5" fill="#F5EDD8" opacity="0.35"/>
+            <circle cx="70" cy="56" r="26" fill="#E8C99A"/>
+            <ellipse cx="70" cy="39" rx="21" ry="13" fill="#C1714A"/>
+            <ellipse cx="70" cy="32" rx="14" ry="8" fill="#A8522A"/>
+            <circle cx="70" cy="26" r="5" fill="#D4A853"/>
+            <path d="M49 40 Q70 45 91 40" stroke="#F5EDD8" stroke-width="1.5" fill="none" opacity="0.7"/>
+            <g id="eyeGroup">
+              <path d="M59 60 Q63 56 67 60" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round" id="eyeL"/>
+              <path d="M73 60 Q77 56 81 60" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round" id="eyeR"/>
+            </g>
+            <path id="mouth" d="M62 70 Q70 77 78 70" stroke="#3a2a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <ellipse cx="56" cy="66" rx="6" ry="4" fill="#E07060" opacity="0.3" id="cheekL"/>
+            <ellipse cx="84" cy="66" rx="6" ry="4" fill="#E07060" opacity="0.3" id="cheekR"/>
+            <ellipse cx="44" cy="88" rx="9" ry="7" fill="#E8C99A"/>
+            <path d="M37 87 Q44 82 51 87" stroke="#d4a070" stroke-width="1.2" fill="none"/>
+            <text x="18" y="52" font-size="12" fill="#D4A853" opacity="0.6">&#9733;</text>
+            <text x="110" y="48" font-size="10" fill="#7B8CC5" opacity="0.6">&#9733;</text>
+          </svg>
+        </div>
+        <div class="mood-text" id="moodText">Hello, little Antonio!</div>
+      </div>
+    </div>
+
+    <div class="col-right">
+      <div id="personalityReveal"></div>
+      <div class="happiness-display">
+        <div>
+          <div class="happiness-label" id="levelLabel">NEWBORN — Level 1</div>
+          <div class="happiness-stars" id="happyStars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+          <div class="level-progress-wrap">
+            <div class="level-progress-label" id="progressLabel">Reach 90 to grow!</div>
+            <div class="level-progress-track"><div class="level-progress-fill" id="progressFill" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="happiness-score" id="scoreDisplay">69</div>
+      </div>
+
+      <div class="actions-grid" id="actionsGrid">
+        <button class="action-btn feed"     id="btn-feed"     onclick="doAction('feed')">    <div class="btn-label">FEED</div>        <div class="btn-cooldown" id="cd-feed"></div></button>
+        <button class="action-btn cuddle"   id="btn-cuddle"   onclick="doAction('cuddle')">  <div class="btn-label">CUDDLE</div>      <div class="btn-cooldown" id="cd-cuddle"></div></button>
+        <button class="action-btn burp"     id="btn-burp"     onclick="doAction('burp')">    <div class="btn-label">BURP</div>        <div class="btn-cooldown" id="cd-burp"></div></button>
+        <button class="action-btn diaper"   id="btn-diaper"   onclick="doAction('diaper')">  <div class="btn-label">DIAPER</div>      <div class="btn-cooldown" id="cd-diaper"></div></button>
+        <button class="action-btn tummy   locked" id="btn-tummy"    onclick="doAction('tummy')">   <div class="btn-label">TUMMY TIME</div>  <div class="btn-hint" id="hint-tummy">unlocks at level 2</div><div class="btn-cooldown" id="cd-tummy"></div></button>
+        <button class="action-btn peekaboo locked" id="btn-peekaboo" onclick="doAction('peekaboo')"><div class="btn-label">PEEK-A-BOO</div> <div class="btn-hint" id="hint-peekaboo">unlocks at level 3</div><div class="btn-cooldown" id="cd-peekaboo"></div></button>
+        <button class="action-btn story   locked" id="btn-story"    onclick="doAction('story')">   <div class="btn-label">STORYTIME</div>   <div class="btn-hint" id="hint-story">unlocks at level 3</div><div class="btn-cooldown" id="cd-story"></div></button>
+        <button class="action-btn solids  locked" id="btn-solids"   onclick="doAction('solids')">  <div class="btn-label">SOLID FOODS</div><div class="btn-hint" id="hint-solids">unlocks at level 4</div><div class="btn-cooldown" id="cd-solids"></div></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WIN ══ -->
+<div class="win-overlay" id="winOverlay">
+  <div class="win-turtle-wrap">
+    <svg width="160" height="160" viewBox="0 0 160 160" fill="none">
+      <ellipse cx="80" cy="18" rx="7" ry="16" fill="#D4A853" transform="rotate(0 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#C1714A" transform="rotate(30 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#D4A853" transform="rotate(60 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#C1714A" transform="rotate(90 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#D4A853" transform="rotate(120 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#C1714A" transform="rotate(150 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#D4A853" transform="rotate(180 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#C1714A" transform="rotate(210 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#D4A853" transform="rotate(240 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#C1714A" transform="rotate(270 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#D4A853" transform="rotate(300 80 80)"/><ellipse cx="80" cy="18" rx="7" ry="16" fill="#C1714A" transform="rotate(330 80 80)"/>
+      <ellipse cx="80" cy="26" rx="4" ry="10" fill="#7B8CC5" transform="rotate(15 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7A9E7E" transform="rotate(45 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7B8CC5" transform="rotate(75 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7A9E7E" transform="rotate(105 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7B8CC5" transform="rotate(135 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7A9E7E" transform="rotate(165 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7B8CC5" transform="rotate(195 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7A9E7E" transform="rotate(225 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7B8CC5" transform="rotate(255 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7A9E7E" transform="rotate(285 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7B8CC5" transform="rotate(315 80 80)"/><ellipse cx="80" cy="26" rx="4" ry="10" fill="#7A9E7E" transform="rotate(345 80 80)"/>
+      <circle cx="80" cy="80" r="36" fill="#D4A853"/><circle cx="80" cy="80" r="36" fill="none" stroke="#A8522A" stroke-width="3"/><circle cx="80" cy="80" r="28" fill="#F0C060"/>
+      <path d="M68 77 Q72 72 76 77" stroke="#A8522A" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M84 77 Q88 72 92 77" stroke="#A8522A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="66" cy="83" rx="6" ry="4" fill="#E07060" opacity="0.3"/><ellipse cx="94" cy="83" rx="6" ry="4" fill="#E07060" opacity="0.3"/>
+      <path d="M68 88 Q80 98 92 88" stroke="#A8522A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="win-title">Little Antonio will thrive, wrapped in all your love.</div>
+  <button class="win-btn" onclick="restartGame()">Play Again</button>
+</div>
+
+<script>
+// ── LEVELS ──
+const LEVELS = [
+  { num:1, label:'NEWBORN',  winScore:90,  decayMult:1.0,  unlocks:[], transTitle:'', transDesc:'', transUnlock:'', transChallenge:'' },
+  { num:2, label:'1 MONTH',  winScore:92,  decayMult:1.3,  unlocks:['tummy'],            transTitle:'Antonio is 1 Month Old!',  transDesc:'He is stronger, more alert, and full of little surprises.',       transUnlock:'+ Tummy Time unlocked!',             transChallenge:'Stats drop faster now — stay on your toes!' },
+  { num:3, label:'3 MONTHS', winScore:95,  decayMult:1.65, unlocks:['peekaboo','story'],  transTitle:'Antonio is 3 Months Old!', transDesc:'He is giggling, grabbing, and melting your hearts daily.',       transUnlock:'+ Peek-a-boo & Storytime unlocked!', transChallenge:'Random fussiness events start happening now!' },
+  { num:4, label:'6 MONTHS', winScore:97,  decayMult:2.0,  unlocks:['solids'],            transTitle:'Antonio is 6 Months Old!', transDesc:'Half a year! Teething begins... it is going to be a wild ride.', transUnlock:'+ Solid Foods unlocked!',            transChallenge:'Stats drop even faster — keep up!' },
+];
+
+// ── PERSONALITY ──
+const CORE_ACTIONS = ['feed','cuddle','burp','diaper'];
+const ALL_ACTIONS  = ['feed','cuddle','burp','diaper','tummy','peekaboo','story','solids'];
+const P_NAMES    = { feed:'Little Foodie', cuddle:'Cuddle Bug', burp:'Burp Champion', diaper:'Freshness Fan' };
+const P_DISLIKES = { feed:'burp', cuddle:'diaper', burp:'tummy', diaper:'feed' };
+const P_DISLIKE_LABELS = { burp:'burping', tummy:'tummy time', diaper:'diaper changes', feed:'feeding' };
+
+let personality = { loves:'cuddle', dislikes:'diaper', name:'Cuddle Bug', dislikeLabel:'diaper changes' };
+let actionCounts = {};
+let personalityRevealed = false;
+
+function randomPersonality() {
+  const loves = CORE_ACTIONS[Math.floor(Math.random() * CORE_ACTIONS.length)];
+  const dislikes = P_DISLIKES[loves];
+  personality = { loves, dislikes, name: P_NAMES[loves], dislikeLabel: P_DISLIKE_LABELS[dislikes] };
+  personalityRevealed = false;
+  actionCounts = {};
+  ALL_ACTIONS.forEach(a => actionCounts[a] = 0);
+}
+
+function checkPersonalityReveal() {
+  if (personalityRevealed) return;
+  const total = CORE_ACTIONS.reduce((s,a) => s + actionCounts[a], 0);
+  if (total >= 5) {
+    personalityRevealed = true;
+    const el = document.getElementById('personalityReveal');
+    el.innerHTML = `Antonio is a <span class="p-loves">${personality.name}</span> who dislikes <span class="p-dislikes">${personality.dislikeLabel}</span>!`;
+    el.classList.add('visible');
+    applyPersonalityStyles();
+  }
+}
+
+function applyPersonalityStyles() {
+  ALL_ACTIONS.forEach(a => {
+    const btn = document.getElementById('btn-'+a);
+    if (!btn) return;
+    btn.classList.remove('loved','disliked');
+    if (personalityRevealed) {
+      if (a === personality.loves)    btn.classList.add('loved');
+      if (a === personality.dislikes) btn.classList.add('disliked');
+    }
+  });
+}
+
+// ── RANDOM EVENTS ──
+const EVENTS = [
+  { msg:'Growth spurt! Antonio is extra hungry.',      effect:()=>{ state.hunger = Math.max(0, state.hunger-20); } },
+  { msg:'Wind pain! Burp him quick.',                  effect:()=>{ state.hunger = Math.max(0, state.hunger-15); } },
+  { msg:'Overstimulated! Love drops suddenly.',        effect:()=>{ state.love   = Math.max(0, state.love-18);   } },
+  { msg:'Sleep regression! Sleep is draining fast.',  effect:()=>{ state.sleep  = Math.max(0, state.sleep-25);  } },
+  { msg:'Hiccups! Antonio needs a cuddle.',            effect:()=>{ state.love   = Math.max(0, state.love-10);   } },
+];
+let eventTimeout = null;
+
+function scheduleEvent() {
+  if (eventTimeout) clearTimeout(eventTimeout);
+  const delay = 12000 + Math.random()*10000;
+  eventTimeout = setTimeout(()=>{
+    if (!state.gameActive) return;
+    const ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+    ev.effect(); showEventBanner(ev.msg); updateUI(); scheduleEvent();
+  }, delay);
+}
+
+function showEventBanner(msg) {
+  const b = document.getElementById('eventBanner');
+  b.textContent = msg; b.classList.add('show');
+  setTimeout(()=>b.classList.remove('show'), 3500);
+}
+
+// ── ACTIONS ──
+const cooldownBase = { feed:2000, cuddle:2500, burp:3000, diaper:3500, tummy:4000, peekaboo:3000, story:4500, solids:3500 };
+const actions = {
+  feed:     { effects:{hunger:+25,happy:+10,sleep:-5},  messages:['Yum yum!','Milk time!','All full!'],        color:'#E07060', animation:'bounce' },
+  cuddle:   { effects:{love:+30,happy:+20,sleep:+5},    messages:['So warm!','Snuggle time!','Love!'],          color:'#C1714A', animation:'bounce' },
+  burp:     { effects:{hunger:+10,happy:+15,love:+5},   messages:['BUUURP!','Phew!','Better now!'],             color:'#D4A853', animation:'wobble' },
+  diaper:   { effects:{happy:+20,love:+10,sleep:+10},   messages:['So fresh!','All clean!','Thank you!'],       color:'#7A9E7E', animation:'bounce' },
+  tummy:    { effects:{happy:+18,love:+12,hunger:-8},   messages:['So strong!','Lifting that head!','Go go!'],  color:'#7B8CC5', animation:'wiggle' },
+  peekaboo: { effects:{happy:+25,love:+15},             messages:['Peek-a-boo!','Found you!','Giggle!'],        color:'#E8926A', animation:'bounce' },
+  story:    { effects:{sleep:+20,love:+10,happy:+8},    messages:['Once upon...','Bedtime story!','Shhh...'],   color:'#D4A853', animation:'wobble' },
+  solids:   { effects:{hunger:+30,happy:+15,love:+5},   messages:['First bites!','Mmmm!','More please!'],       color:'#7A9E7E', animation:'bounce' },
+};
+
+// ── STATE ──
+let currentLevel = 0;
+const state = { hunger:70, sleep:80, love:60, happy:65, gameActive:true };
+
+// ── THOUGHT BUBBLE ──
+const thoughtHints = {
+  hunger:['hungry...','feed me!','milk pls'],
+  sleep:['sleepy...','zzz...','so tired'],
+  love:['cuddle me!','hold me!','love me!'],
+};
+let thoughtTimer = null;
+function maybeShowThought() {
+  if (thoughtTimer) return;
+  const lowest = ['hunger','sleep','love'].sort((a,b)=>state[a]-state[b])[0];
+  if (state[lowest] < 38) {
+    const bubble = document.getElementById('thoughtBubble');
+    bubble.textContent = thoughtHints[lowest][Math.floor(Math.random()*3)];
+    bubble.classList.add('show');
+    thoughtTimer = setTimeout(()=>{ bubble.classList.remove('show'); thoughtTimer=null; }, 2500);
+  }
+}
+
+// ── HELPERS ──
+function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+function getMood() {
+  const avg = (state.hunger+state.sleep+state.love+state.happy)/4;
+  if (avg>75) return {text:'Cooing happily!',    eyes:'happy',  mouth:'smile'};
+  if (avg>55) return {text:'Content for now...', eyes:'normal', mouth:'neutral'};
+  if (avg>35) return {text:'Getting fussy...',   eyes:'sleepy', mouth:'frown'};
+  return             {text:'WAAAH! Help me!',    eyes:'cry',    mouth:'cry'};
+}
+
+function updateBabyFace(mood) {
+  const eyeL=document.getElementById('eyeL'),eyeR=document.getElementById('eyeR');
+  const mouth=document.getElementById('mouth'),cL=document.getElementById('cheekL'),cR=document.getElementById('cheekR');
+  switch(mood.eyes){
+    case 'happy':  eyeL.setAttribute('d','M59 60 Q63 56 67 60');eyeR.setAttribute('d','M73 60 Q77 56 81 60');cL.setAttribute('opacity','0.35');cR.setAttribute('opacity','0.35');break;
+    case 'normal': eyeL.setAttribute('d','M59 60 L67 60');      eyeR.setAttribute('d','M73 60 L81 60');      cL.setAttribute('opacity','0.2'); cR.setAttribute('opacity','0.2'); break;
+    case 'sleepy': eyeL.setAttribute('d','M59 62 Q63 62 67 62');eyeR.setAttribute('d','M73 62 Q77 62 81 62');cL.setAttribute('opacity','0.15');cR.setAttribute('opacity','0.15');break;
+    case 'cry':    eyeL.setAttribute('d','M59 58 Q63 63 67 58');eyeR.setAttribute('d','M73 58 Q77 63 81 58');cL.setAttribute('opacity','0.5'); cR.setAttribute('opacity','0.5'); break;
+  }
+  switch(mood.mouth){
+    case 'smile':   mouth.setAttribute('d','M62 70 Q70 77 78 70');break;
+    case 'neutral': mouth.setAttribute('d','M62 71 Q70 72 78 71');break;
+    case 'frown':   mouth.setAttribute('d','M62 74 Q70 69 78 74');break;
+    case 'cry':     mouth.setAttribute('d','M62 76 Q70 70 78 76');break;
+  }
+}
+
+function applyLevelUnlocks() {
+  const unlocked = [];
+  for (let i=0; i<=currentLevel; i++) unlocked.push(...LEVELS[i].unlocks);
+  ALL_ACTIONS.forEach(a => {
+    const btn  = document.getElementById('btn-'+a);
+    const hint = document.getElementById('hint-'+a);
+    if (!btn) return;
+    const isLocked = !CORE_ACTIONS.includes(a) && !unlocked.includes(a);
+    if (isLocked) btn.classList.add('locked'); else btn.classList.remove('locked');
+    btn.classList.remove('loved','disliked');
+    if (hint) hint.style.display = isLocked ? 'block' : 'none';
+  });
+  for (let i=0;i<4;i++){
+    const pip=document.getElementById('pip'+i);
+    if (i<currentLevel)        pip.className='level-pip done';
+    else if (i===currentLevel) pip.className='level-pip active';
+    else                       pip.className='level-pip';
+  }
+  document.getElementById('levelLabel').textContent=`${LEVELS[currentLevel].label} — Level ${LEVELS[currentLevel].num}`;
+  applyPersonalityStyles();
+}
+
+function updateUI() {
+  ['hunger','sleep','love','happy'].forEach(s=>{
+    const bar=document.getElementById('bar-'+s);
+    bar.style.width=state[s]+'%';
+    bar.classList.toggle('low', state[s]<25);
+  });
+  const mood=getMood();
+  document.getElementById('moodText').textContent=mood.text;
+  updateBabyFace(mood);
+  const score=Math.round((state.hunger+state.sleep+state.love+state.happy)/4);
+  const scoreEl=document.getElementById('scoreDisplay');
+  if (parseInt(scoreEl.textContent)!==score){
+    scoreEl.textContent=score;
+    scoreEl.classList.remove('pop'); void scoreEl.offsetWidth; scoreEl.classList.add('pop');
+  }
+  const stars=Math.ceil(score/20);
+  document.getElementById('happyStars').innerHTML='&#9733;'.repeat(stars)+'<span style="opacity:0.2">&#9733;</span>'.repeat(5-stars);
+  const lvl=LEVELS[currentLevel];
+  const pct=Math.min(100,Math.round((score/lvl.winScore)*100));
+  document.getElementById('progressFill').style.width=pct+'%';
+  const isLast=currentLevel===LEVELS.length-1;
+  document.getElementById('progressLabel').textContent=isLast?`Reach ${lvl.winScore} to win!`:`Reach ${lvl.winScore} to grow!`;
+  if (score>=lvl.winScore && state.gameActive) {
+    state.gameActive=false;
+    if (isLast) setTimeout(()=>document.getElementById('winOverlay').classList.add('active'),800);
+    else        setTimeout(showLevelTransition, 600);
+  }
+  maybeShowThought();
+}
+
+// ── LEVEL TRANSITION ──
+function showLevelTransition() {
+  const next=LEVELS[currentLevel+1];
+  document.getElementById('lvlBadge').textContent=`LEVEL ${next.num}`;
+  document.getElementById('lvlTitle').textContent=next.transTitle;
+  document.getElementById('lvlDesc').textContent=next.transDesc;
+  document.getElementById('lvlUnlock').textContent=next.transUnlock;
+  document.getElementById('lvlChallenge').textContent=next.transChallenge;
+  document.getElementById('levelOverlay').classList.add('active');
+}
+
+function resumeLevel() {
+  currentLevel++;
+  document.getElementById('levelOverlay').classList.remove('active');
+  state.gameActive=true;
+  state.hunger=60; state.sleep=65; state.love=55;
+  state.happy=clamp(state.hunger*0.3+state.sleep*0.3+state.love*0.4);
+  applyLevelUnlocks();
+  if (currentLevel>=2) scheduleEvent();
+  updateUI();
+}
+
+// ── EFFECTS ──
+function spawnEffect(text,color){
+  const stage=document.getElementById('babyStage');
+  const el=document.createElement('div');
+  el.className='effect-msg';el.textContent=text;el.style.color=color;
+  el.style.left=(40+Math.random()*80)+'px';el.style.top=(30+Math.random()*40)+'px';
+  stage.appendChild(el);setTimeout(()=>el.remove(),1200);
+}
+
+function spawnStars(n,color){
+  const stage=document.getElementById('babyStage');
+  for(let i=0;i<n;i++){
+    const el=document.createElement('div');el.className='star-particle';
+    const angle=Math.random()*Math.PI*2,dist=30+Math.random()*60;
+    el.style.cssText=`left:${60+Math.random()*60}px;top:${40+Math.random()*60}px;color:${color};--tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist}px;animation-delay:${Math.random()*0.3}s;`;
+    el.textContent=['★','✦','✨'][Math.floor(Math.random()*3)];
+    stage.appendChild(el);setTimeout(()=>el.remove(),1200);
+  }
+}
+
+function animateBaby(type){
+  const svg=document.getElementById('babySvg');
+  svg.classList.remove('bounce','wobble','wiggle','baby-float');void svg.offsetWidth;
+  svg.classList.add(type);
+  setTimeout(()=>{svg.classList.remove(type);svg.classList.add('baby-float');},700);
+}
+
+function startCooldownBar(actionName){
+  const bar=document.getElementById('cd-'+actionName);
+  const btn=document.getElementById('btn-'+actionName);
+  let dur=cooldownBase[actionName];
+  // disliked action refills slightly faster — a subtle trap!
+  if(actionName===personality.dislikes) dur=Math.round(dur*0.75);
+  btn.disabled=true;btn.style.opacity='0.5';
+  bar.style.transition='none';bar.style.width='100%';
+  setTimeout(()=>{bar.style.transition=`width ${dur}ms linear`;bar.style.width='0%';},50);
+  setTimeout(()=>{btn.disabled=false;if(!btn.classList.contains('locked'))btn.style.opacity='';},dur);
+}
+
+// ── DO ACTION ──
+function doAction(actionName){
+  if(!state.gameActive) return;
+  const btn=document.getElementById('btn-'+actionName);
+  if(!btn||btn.disabled||btn.classList.contains('locked')) return;
+  const action=actions[actionName];
+  let mult=1;
+  if(actionName===personality.loves)    mult=1.5;
+  if(actionName===personality.dislikes) mult=0.4;
+  Object.entries(action.effects).forEach(([stat,delta])=>{
+    let adjusted = delta * mult;
+    // if disliked, flip positive effects to negative — it upsets him
+    if (actionName === personality.dislikes && delta > 0) adjusted = -Math.abs(delta) * 0.6;
+    state[stat]=clamp(state[stat]+adjusted);
+  });
+  actionCounts[actionName]=(actionCounts[actionName]||0)+1;
+  checkPersonalityReveal();
+  let msg=action.messages[Math.floor(Math.random()*action.messages.length)];
+  let color=action.color;
+  if(actionName===personality.loves&&mult>1){
+    msg=['Loves this!','Yes please!','More!'][Math.floor(Math.random()*3)];color='#a0c8a4';
+  } else if(actionName===personality.dislikes&&mult<1){
+    msg=['Hmph...','Not this!','Nope!'][Math.floor(Math.random()*3)];color='#E07060';
+  }
+  spawnEffect(msg,color);
+  spawnStars(actionName===personality.loves?7:4,color);
+  animateBaby(action.animation);
+  startCooldownBar(actionName);
+  updateUI();
+}
+
+// ── TICK ──
+function tick(){
+  if(!state.gameActive) return;
+  const d=LEVELS[currentLevel].decayMult;
+  state.hunger=clamp(state.hunger-0.8*d);
+  state.sleep=clamp(state.sleep-0.5*d);
+  state.love=clamp(state.love-0.7*d);
+  state.happy=clamp(state.hunger*0.3+state.sleep*0.3+state.love*0.4);
+  updateUI();
+}
+
+// ── SPLASH → GAME ──
+function startGame(){
+  document.getElementById('splashScreen').classList.add('hiding');
+  setTimeout(()=>{
+    document.getElementById('splashScreen').style.display='none';
+    document.getElementById('gameWrapper').classList.add('visible');
+  },680);
+}
+
+// ── RESTART ──
+function restartGame(){
+  currentLevel=0;
+  state.hunger=70;state.sleep=80;state.love=60;state.happy=65;state.gameActive=true;
+  document.getElementById('winOverlay').classList.remove('active');
+  const pr=document.getElementById('personalityReveal');
+  pr.classList.remove('visible');pr.innerHTML='';
+  if(eventTimeout){clearTimeout(eventTimeout);eventTimeout=null;}
+  ALL_ACTIONS.forEach(a=>{
+    const btn=document.getElementById('btn-'+a);
+    const bar=document.getElementById('cd-'+a);
+    if(btn){btn.disabled=false;btn.style.opacity='';}
+    if(bar){bar.style.transition='none';bar.style.width='0%';}
+  });
+  randomPersonality();
+  applyLevelUnlocks();
+  updateUI();
+}
+
+// ── INIT ──
+randomPersonality();
+applyLevelUnlocks();
+updateUI();
+setInterval(tick,1000);
+</script>
+</body>
+</html>
